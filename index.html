@@ -621,7 +621,7 @@
 
       // square cells: block width (in height units) == row height
       float dir = rowRand > 0.5 ? 1.0 : -1.0;
-      float speed = 0.04 + 0.12 * hash(ry * 3.1);
+      float speed = 0.03 + 0.40 * hash(ry * 3.1);   // wide spread -> each row clearly different
       float u = (fx + t * speed * dir) / rowH;
       float cx = floor(u);
       float fxLocal = fract(u);
@@ -854,8 +854,8 @@
   window.addEventListener("keydown", wake);
   wake();
 
-  applyPalette(1);
-  applyMode(13);
+  applyPalette(0);
+  applyMode(11);
 
   // Render loop with accumulated time so speed changes stay smooth
   let last = performance.now();
