@@ -125,6 +125,15 @@
     padding: 0 10px 0 12px;
   }
 
+  .slider {
+    width: 120px;
+    height: 4px;
+    margin: 0 10px;
+    accent-color: #fff;
+    cursor: pointer;
+  }
+  .slider:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.7); outline-offset: 4px; }
+
   .stylebar {
     position: fixed;
     top: 20px;
@@ -215,7 +224,9 @@
   <span class="label">Palette</span>
   <div class="swatches" id="swatches"></div>
   <span class="sep"></span>
-  <button id="btnSpeed" title="Tempo umschalten">Ruhig</button>
+  <span class="label">Tempo</span>
+  <input id="speed" class="slider" type="range" min="0" max="4" step="0.05" value="1" title="Tempo: statisch → maximal dynamisch" aria-label="Tempo" />
+  <span class="sep"></span>
   <button id="btnLyric" title="Beispieltext ein/aus">Text</button>
   <button id="btnFull" title="Vollbild (F)">Vollbild</button>
 </div>
@@ -281,6 +292,16 @@
       swatch: "linear-gradient(135deg,#1a1a1f,#faf5e6)",
       colors: [[0.10, 0.10, 0.12], [0.30, 0.29, 0.30], [0.62, 0.60, 0.58], [0.98, 0.96, 0.90]],
     },
+    {
+      name: "Champagner",
+      swatch: "linear-gradient(135deg,#241b06,#ffedb0)",
+      colors: [[0.14, 0.11, 0.03], [0.40, 0.32, 0.10], [0.82, 0.70, 0.30], [1.00, 0.94, 0.72]],
+    },
+    {
+      name: "Echtgold",
+      swatch: "linear-gradient(135deg,#1e1500,#ffd700)",
+      colors: [[0.12, 0.08, 0.00], [0.55, 0.40, 0.05], [1.00, 0.84, 0.20], [1.00, 0.95, 0.60]],
+    },
   ];
 
   const canvas = document.getElementById("gl");
@@ -343,9 +364,9 @@
 
     // --- Style 0: flowing gradient fields with a slow vertical pulse ---
     vec3 styleGradient(vec2 p, float aspect) {
-      float t = u_time * 0.022;
+      float t = u_time * 0.012;
       float S = 0.36;
-      float pulse = 0.5 + 0.5 * sin(u_time * 0.11);
+      float pulse = 0.5 + 0.5 * sin(u_time * 0.06);
       vec2 sp = p * vec2(S * 1.2, S * 0.6);
       vec2 drift = vec2(0.03 * pulse, t + 0.18 * pulse);
 
@@ -362,40 +383,7 @@
       return col;
     }
 
-    // --- Style 1: soft bokeh orbs drifting slowly upward over a deep wash ---
-    vec3 styleBokeh(vec2 uv, float aspect) {
-      float t = u_time * 0.03;
-      vec2 fp = uv * vec2(aspect, 1.0);
-
-      // deep vertical wash as backdrop
-      vec3 col = mix(u_c0, u_c1, smoothstep(0.0, 1.1, uv.y));
-
-      for (int i = 0; i < 46; i++) {
-        float fi = float(i);
-        float rx = hash(fi * 1.7);
-        float rz = hash(fi * 5.3 + 2.0);      // size / depth
-        float rp = hash(fi * 9.1 + 7.0);      // twinkle phase
-        float spd = 0.25 + 0.85 * rz;
-
-        // slow upward rise, gentle horizontal sway
-        float y = fract(rx + t * 0.06 * spd);
-        float x = fract(hash(fi * 3.3) + 0.018 * sin(u_time * 0.15 + fi));
-        vec2 pos = vec2(x * aspect, y);
-
-        float rad = 0.03 + 0.10 * rz;
-        float d = length(fp - pos);
-        float glow = smoothstep(rad, 0.0, d);
-        glow *= glow;
-
-        // soft breathing brightness so orbs shimmer rather than sit still
-        float tw = 0.6 + 0.4 * sin(u_time * (0.4 + rp) + rp * 6.28);
-        vec3 pc = mix(u_c2, u_c3, rz);
-        col += pc * glow * 0.5 * tw * (0.4 + 0.6 * rz);
-      }
-      return col;
-    }
-
-    // --- Style 2: volumetric godrays through drifting fog ---
+    // --- Godrays: volumetric light rays through drifting fog ---
     vec3 styleGodrays(vec2 uv, float aspect) {
       float t = u_time * 0.03;
       vec2 fp = uv * vec2(aspect, 1.0);
@@ -435,30 +423,7 @@
       return c;
     }
 
-    // --- Style 3: Cosmos — drifting nebula with a twinkling starfield ---
-    vec3 styleCosmos(vec2 uv, float aspect) {
-      float t = u_time * 0.02;
-      vec2 fp = uv * vec2(aspect, 1.0);
-      vec2 sp = fp * 1.4 + vec2(t * 0.1, -t * 0.15);
-      float neb = fbm(sp + fbm(sp * 0.6 + vec2(0.0, t)) * 1.2) * 0.5 + 0.5;
-      vec3 col = mix(u_c0 * 0.6, u_c1, neb);
-      col = mix(col, u_c2, pow(neb, 3.0));
-
-      vec2 g = fp * vec2(70.0, 70.0);
-      vec2 gi = floor(g), gf = fract(g);
-      float rnd = hash(dot(gi, vec2(41.3, 289.1)));
-      float star = 0.0;
-      if (rnd > 0.90) {
-        vec2 c = vec2(hash(rnd * 3.1), hash(rnd * 7.7));
-        float d = length(gf - c);
-        float tw = 0.5 + 0.5 * sin(u_time * (1.0 + rnd * 3.0) + rnd * 20.0);
-        star = smoothstep(0.09, 0.0, d) * tw;
-      }
-      col += u_c3 * star * 1.3;
-      return col;
-    }
-
-    // --- Style 4: Rushing Waters — downward torrent with caustic veins + foam ---
+    // --- Rushing Waters: downward torrent with caustic veins + foam ---
     vec3 styleWaves(vec2 uv, float aspect) {
       float t = u_time * 0.5;
       vec2 fp = uv * vec2(aspect, 1.0);
@@ -573,6 +538,132 @@
       return col;
     }
 
+    // --- Räucherwerk: rising, curling incense smoke ---
+    vec3 styleSmoke(vec2 uv, float aspect) {
+      float t = u_time * 0.10;
+      vec2 fp = uv * vec2(aspect, 1.0);
+      // upward motion + curl that sways with height
+      vec2 sp = vec2(fp.x * 1.6, fp.y * 1.1 - t);
+      float curl = fbm(sp * 0.7 + vec2(0.0, t * 0.6));
+      sp.x += curl * 0.5;
+      float d = fbm(sp + fbm(sp * 0.5 + vec2(3.0, 0.0)) * 0.7) * 0.5 + 0.5;
+      // smoke thins out toward the top
+      float dens = d * mix(1.0, 0.25, smoothstep(0.2, 1.0, uv.y));
+      vec3 col = mix(u_c0, u_c1, dens);
+      col = mix(col, u_c2, smoothstep(0.45, 0.9, dens));
+      col += u_c3 * pow(dens, 3.0) * 0.35;
+      return col;
+    }
+
+    // --- Aufstieg: soft columns of light rising upward ---
+    vec3 styleRising(vec2 uv, float aspect) {
+      float t = u_time * 0.13;
+      vec2 fp = uv * vec2(aspect, 1.0);
+      // stretched-vertical noise scrolling up -> streaks that rise
+      vec2 sp = vec2(fp.x * 2.2, fp.y * 0.8 - t);
+      float streak = fbm(sp + fbm(sp * 0.6 + vec2(0.0, t)) * 0.6) * 0.5 + 0.5;
+      float glow = pow(streak, 2.2);
+      // brighter near the bottom (source), lifting upward
+      float lift = smoothstep(1.15, -0.1, uv.y);
+      glow *= mix(0.45, 1.0, lift);
+      vec3 col = mix(u_c0, u_c2, glow);
+      col = mix(col, u_c3, pow(glow, 2.0) * 0.75);
+      return col;
+    }
+
+    // --- Kreise: modern circles/rings floating upward ---
+    vec3 styleCircles(vec2 uv, float aspect) {
+      float t = u_time;
+      vec2 fp = uv * vec2(aspect, 1.0);
+      vec3 col = mix(u_c0, u_c1, uv.y * 0.5);
+      for (int i = 0; i < 14; i++) {
+        float fi = float(i);
+        float rx = hash(fi * 1.9);
+        float rs = hash(fi * 4.7 + 1.0);          // size
+        float spd = 0.4 + 0.6 * hash(fi * 7.3);
+        float y = fract(rx + t * 0.025 * spd);     // rise bottom -> top
+        float x = fract(hash(fi * 3.1) + 0.02 * sin(t * 0.2 + fi));
+        vec2 pos = vec2(x * aspect, y);
+        float rad = 0.07 + 0.13 * rs;
+        float d = length(fp - pos);
+        float fade = sin(y * 3.14159);             // fade in at bottom, out at top
+        vec3 cc = mix(u_c2, u_c3, rs);
+        if (mod(fi, 2.0) < 1.0) {
+          float ring = smoothstep(0.02, 0.0, abs(d - rad));
+          col += cc * ring * 0.6 * fade;
+        } else {
+          float disc = smoothstep(rad, rad * 0.4, d);
+          col = mix(col, cc, disc * 0.4 * fade);
+        }
+      }
+      return col;
+    }
+
+    // --- Pixel Lines: square pixels (feather = edge softness), varied sizes ---
+    vec3 pixelLines(vec2 uv, float aspect, float feather) {
+      float t = u_time;
+      float fx = uv.x * aspect;
+
+      // variable-height rows: scan randomized band boundaries up the screen
+      float acc = 0.0;
+      float ry = -1.0;
+      float rowH = 0.05;
+      for (int i = 0; i < 26; i++) {
+        float h = 0.022 + 0.06 * hash(float(i) * 1.7 + 0.3);    // 2.2%..8.2% tall
+        if (uv.y >= acc && uv.y < acc + h) { ry = float(i); rowH = h; break; }
+        acc += h;
+      }
+
+      vec3 col = vec3(0.0);
+      if (ry < 0.0) return col;
+
+      float rowRand = hash(ry * 1.37);
+
+      // square cells: block width (in height units) == row height
+      float dir = rowRand > 0.5 ? 1.0 : -1.0;
+      float speed = 0.04 + 0.12 * hash(ry * 3.1);
+      float u = (fx + t * speed * dir) / rowH;
+      float cx = floor(u);
+      float fxLocal = fract(u);
+      float fyLocal = (uv.y - acc) / rowH;
+      float cellRand = hash(cx * 2.7 + ry * 11.3);
+      float rowActivity = 0.30 + 0.5 * rowRand;
+      float on = step(1.0 - rowActivity, cellRand);
+      float br = 0.45 + 0.55 * hash(cx * 5.1 + ry * 3.3);
+
+      // edge softness controlled by the caller (feather)
+      float sx = smoothstep(0.0, feather, fxLocal) * smoothstep(1.0, 1.0 - feather, fxLocal);
+      float sy = smoothstep(0.0, feather, fyLocal) * smoothstep(1.0, 1.0 - feather, fyLocal);
+
+      vec3 pc = palAt(fract(cellRand * 1.9 + rowRand * 0.7));
+      col += pc * on * br * sx * sy;
+
+      return col;
+    }
+
+    // --- Säulen: short fixed tiles, bright-bottom gradient in an inverted-U; colours flow up ---
+    vec3 styleColumns(vec2 uv, float aspect) {
+      float N = 7.0;    // columns
+      float M = 40.0;   // flat, short tiles per column
+      float ci = floor(uv.x * N);
+      float ri = floor(uv.y * M);
+      float cx = (ci + 0.5) / N;
+      float ry = (ri + 0.5) / M;   // tile centre height (0 bottom .. 1 top)
+      float colRand = hash(ci * 1.7);
+
+      // inverted-U: bright reaches higher in the centre + slight per-column offset (seams)
+      float reach = 0.42 + 0.46 * sin(cx * 3.14159) + 0.05 * (colRand - 0.5);
+
+      // vertical gradient over the tiles: bright at bottom -> dark toward 'reach'
+      float grad = clamp(1.0 - ry / reach, 0.0, 1.0);
+
+      // each tile's colour keeps shifting, height-phased -> upward-flow illusion (tiles stay put)
+      float flow = 0.10 * sin(ry * 14.0 - u_time * 1.6 + colRand * 6.28);
+
+      float val = clamp(grad + flow, 0.0, 1.0);
+      return palAt(val);
+    }
+
     void main() {
       vec2 uv = gl_FragCoord.xy / u_res.xy;
       float aspect = u_res.x / u_res.y;
@@ -580,15 +671,19 @@
       p.x *= aspect;
 
       vec3 col;
-      if (u_mode == 1) col = styleBokeh(uv, aspect);
-      else if (u_mode == 2) col = styleGodrays(uv, aspect);
-      else if (u_mode == 3) col = styleCosmos(uv, aspect);
-      else if (u_mode == 4) col = styleWaves(uv, aspect);
-      else if (u_mode == 5) col = styleStained(uv, aspect);
-      else if (u_mode == 6) col = styleMosaic(uv, aspect);
-      else if (u_mode == 7) col = styleRings(uv, aspect);
-      else if (u_mode == 8) col = styleAurora(uv, aspect);
-      else if (u_mode == 9) col = styleRefract(uv, aspect);
+      if (u_mode == 1) col = styleGodrays(uv, aspect);
+      else if (u_mode == 2) col = styleWaves(uv, aspect);
+      else if (u_mode == 3) col = styleStained(uv, aspect);
+      else if (u_mode == 4) col = styleMosaic(uv, aspect);
+      else if (u_mode == 5) col = styleRings(uv, aspect);
+      else if (u_mode == 6) col = styleAurora(uv, aspect);
+      else if (u_mode == 7) col = styleRefract(uv, aspect);
+      else if (u_mode == 8) col = styleSmoke(uv, aspect);
+      else if (u_mode == 9) col = styleRising(uv, aspect);
+      else if (u_mode == 10) col = styleCircles(uv, aspect);
+      else if (u_mode == 11) col = pixelLines(uv, aspect, 0.12);
+      else if (u_mode == 12) col = pixelLines(uv, aspect, 0.42);
+      else if (u_mode == 13) col = styleColumns(uv, aspect);
       else col = styleGradient(p, aspect);
 
       // gentle radial lift toward center, subtle grain to avoid banding
@@ -652,16 +747,20 @@
 
   // --- Style modes (names loosely map to Sunday Screens collection families) ---
   const STYLES = [
-    { name: "Verlauf", title: "Dawn Gradients / Dusk / Chroma" },
-    { name: "Bokeh", title: "Fragrance / Light Boxes (Partikel)" },
+    { name: "Verlauf", title: "Dawn Gradients / Dusk / Chroma (langsam)" },
     { name: "Godrays", title: "Light of the World / Breaking Light" },
-    { name: "Cosmos", title: "Cosmos / Eternal (Sternenfeld + Nebel)" },
     { name: "Rushing Waters", title: "Rushing Waters / Waves (fließendes Wasser)" },
     { name: "Stained Glass", title: "Stained Glass / Dynamic Glass" },
     { name: "Mosaic", title: "Windows / Checkerboard / Mosaic" },
     { name: "Rings", title: "Light Rings / Cascading Light" },
     { name: "Aurora", title: "Atmos / Open Heaven (Vorhänge)" },
     { name: "Refractions", title: "Light Refractions (Glas-Brechung)" },
+    { name: "Räucherwerk", title: "Aufsteigender, wirbelnder Rauch" },
+    { name: "Aufstieg", title: "Lichtsäulen steigen empor (Lobpreis)" },
+    { name: "Kreise", title: "Moderne Kreise/Ringe schweben nach oben" },
+    { name: "Pixel Lines", title: "Quadratische Pixel, leicht geblurrt (Sunday Screens)" },
+    { name: "Pixel Soft", title: "Quadratische Pixel, stark verwaschen" },
+    { name: "Säulen", title: "Gekachelte Säulen, Lichtbogen als umgekehrtes U (Sunday Screens)" },
   ];
   let mode = 0;
   const stylebar = document.getElementById("stylebar");
@@ -702,13 +801,9 @@
   // Speed toggle
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let speed = prefersReduced ? 0 : 1;
-  const btnSpeed = document.getElementById("btnSpeed");
-  function labelSpeed() { btnSpeed.textContent = speed === 0 ? "Standbild" : speed < 1.2 ? "Ruhig" : "Bewegt"; }
-  btnSpeed.addEventListener("click", () => {
-    speed = speed === 0 ? 1 : speed < 1.2 ? 1.8 : 0;
-    labelSpeed();
-  });
-  labelSpeed();
+  const speedSlider = document.getElementById("speed");
+  speedSlider.value = String(speed);
+  speedSlider.addEventListener("input", () => { speed = parseFloat(speedSlider.value); });
 
   // Lyric toggle
   const btnLyric = document.getElementById("btnLyric");
@@ -759,8 +854,8 @@
   window.addEventListener("keydown", wake);
   wake();
 
-  applyPalette(2);
-  applyMode(4);
+  applyPalette(1);
+  applyMode(13);
 
   // Render loop with accumulated time so speed changes stay smooth
   let last = performance.now();
