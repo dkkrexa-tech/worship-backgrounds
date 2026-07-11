@@ -518,7 +518,8 @@
 
     // --- Style 5: Stained Glass — backlit voronoi cells with dark leading ---
     vec3 styleStained(vec2 uv, float aspect) {
-      vec2 fp = uv * vec2(aspect, 1.0) * 4.5 * u_raster;
+      // squared response -> wider Raster range (much coarser panes .. much finer mosaic)
+      vec2 fp = uv * vec2(aspect, 1.0) * 4.5 * u_raster * u_raster;
       vec2 g = floor(fp), f = fract(fp);
       float d1 = 8.0, d2 = 8.0;
       vec2 cellId = g;
