@@ -23,6 +23,10 @@
     width: 100vw;
     height: 100vh;
     display: block;
+    /* global blur; slight scale keeps the blur from darkening the edges */
+    filter: blur(var(--blur, 0px));
+    transform: scale(var(--blur-scale, 1));
+    transform-origin: center;
   }
   #tiles { display: none; }
 
@@ -282,6 +286,8 @@
       <span class="label">Intensität</span>
       <input id="intensity" class="slider" type="range" min="0" max="1" step="0.02" value="0.8" title="Farbintensität: gedämpft → voll" aria-label="Farbintensität" />
     </span>
+    <span class="label">Unschärfe</span>
+    <input id="blur" class="slider" type="range" min="0" max="30" step="0.5" value="0" title="Weichzeichner über alles" aria-label="Unschärfe" />
     <span class="subctl" id="rasterctl">
       <span class="label">Raster</span>
       <input id="grid" class="slider" type="range" min="0" max="1" step="0.02" value="0.38" title="Rasterdichte" aria-label="Raster" />
@@ -1181,6 +1187,14 @@
   const intensitySlider = document.getElementById("intensity");
   intensitySlider.addEventListener("input", () => {
     gl.uniform1f(uIntensity, parseFloat(intensitySlider.value));
+  });
+
+  // global blur (CSS filter on the canvases; slight upscale hides edge bleed)
+  const blurSlider = document.getElementById("blur");
+  blurSlider.addEventListener("input", () => {
+    const px = parseFloat(blurSlider.value);
+    document.documentElement.style.setProperty("--blur", px + "px");
+    document.documentElement.style.setProperty("--blur-scale", (1 + px / 300).toFixed(4));
   });
   tintSlider.addEventListener("input", () => { tintAmount = parseFloat(tintSlider.value); });
 
