@@ -13,3 +13,8 @@ Open `index.html` — or via GitHub Pages: https://dkkrexa-tech.github.io/worshi
 
 Controls: `[` / `]` switch style, keys `1`–`9` switch palette, `F` fullscreen, `T` sample lyric.
 The **Mosaik Kreuz** and **JESUS** styles hide a shape in the mosaic that reveals itself through the motion (lit inverse to the background wave). **Foto-Mix** accepts two dropped photos and tiles them with random switching + palette-colour overlays.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE). Bundled third-party components (Ashima/Gustavson
+simplex noise, the CC BY-SA demo photo) are listed in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
